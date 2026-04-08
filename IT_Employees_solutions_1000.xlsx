@@ -1,0 +1,222 @@
+CREATE DATABASE IT_EMPLOYEES;
+USE IT_EMPLOYEES;
+
+DROP TABLE IF EXISTS employees_1000;
+CREATE TABLE employees_1000 (
+    emp_id            INT PRIMARY KEY,
+    full_name         VARCHAR(100),
+    email             VARCHAR(150),
+    gender            VARCHAR(10),
+    company_name      VARCHAR(50),
+    company_id        INT,
+    department        VARCHAR(100),
+    dept_id           INT,
+    designation       VARCHAR(100),
+    city              VARCHAR(50),
+    experience_yrs    INT,
+    monthly_salary    DECIMAL(10,2),
+    join_date         DATE,
+    primary_skill     VARCHAR(50),
+    secondary_skill   VARCHAR(50),
+    performance_score DECIMAL(3,1),
+    status            VARCHAR(20)
+);
+
+-- BEGINNER LEVEL QUESITONS
+-- Q1: See all employees
+SELECT * FROM employees_1000;
+
+-- Q2: How many total employees?
+SELECT COUNT(emp_id) FROM employees_1000;
+
+-- Q3: All employees from TCS
+SELECT COUNT(emp_id)
+FROM employees_1000
+WHERE company_name = 'TCS';
+
+-- Q4: Employees with salary above 100000
+SELECT emp_id,full_name
+FROM employees_1000
+WHERE monthly_salary > 100000;
+
+-- Q5: All female employees
+SELECT  full_name, company_name, designation
+FROM employees_1000
+WHERE gender = 'Female';
+
+-- Q6: Employees in Mumbai
+select full_name
+from employees_1000
+where city = 'Mumbai';
+
+-- Q7: Employees who know SQL
+select full_name
+from employees_1000
+where primary_skill = 'SQL';
+
+-- Q8: Employees joined after 2022
+SELECT full_name, company_name, join_date
+FROM employees_1000
+WHERE join_date > '2022-01-01'
+ORDER BY join_date DESC;
+
+-- Q9: Active employees only
+SELECT full_name, company_name, designation
+FROM employees_1000
+WHERE status = 'Active';
+
+-- Q10: Sort by salary highest first
+select full_name,monthly_salary
+from employees_1000
+order by monthly_salary desc limit 1;
+
+-- intermediate level
+-- Q11: Count employees per company
+ SELECT company_name, count(emp_id) as total_employees
+ FROM employees_1000
+ GROUP BY company_name
+ ORDER BY total_employees DESC;
+ 
+ -- Q12: Average salary per company
+select distinct company_name, avg(monthly_salary)
+from employees_1000
+group by company_name
+order by company_name desc;
+
+-- Q13: Total salary bill per company
+select distinct company_name, sum(monthly_salary) as total_salary
+from employees_1000
+group by company_name;
+
+-- Q14: Max and min salary per company
+select distinct company_name, max(monthly_salary), min(monthly_salary)
+from employees_1000
+group by company_name;
+ 
+-- Q15: Count employees per designation
+select distinct designation, count(emp_id)
+from employees_1000
+group by designation
+order by count(emp_id) desc;
+
+-- Q16: Average experience per company
+select distinct company_name, avg(experience_yrs)
+from employees_1000
+group by company_name
+order by avg(experience_yrs) desc;
+
+-- Q17: Average performance score per company
+select distinct company_name, avg(performance_score)
+from employees_1000
+group by company_name
+order by avg( performance_score) desc;
+
+-- Q18: Employees per city
+select distinct city, count(emp_id) as total_employees
+from employees_1000
+group by city
+order by count(emp_id) desc;
+
+-- Q19: Companies where avg salary > 80000 (HAVING)
+select company_name, round(avg(monthly_salary),2) as avg_salary
+from employees_1000
+group by company_name
+having avg_salary  > 80000;
+
+-- Q20: Most common primary skill
+select distinct primary_skill, count(primary_skill) as most_common 
+from employees_1000
+group by primary_skill
+order by most_common desc;
+
+-- Q21: Male vs Female count
+select distinct gender, count(gender)
+from employees_1000
+group by gender
+order by count(gender);
+
+-- Q22: Employees above average salary
+select  full_name,company_name, monthly_salary 
+from employees_1000
+where monthly_salary  > (select avg(monthly_salary ) from employees_1000)
+order by monthly_salary desc;
+
+-- Q23: Top 5 highest paid per company (subquery)
+ SELECT company_name, full_name, monthly_salary
+FROM employees_1000
+WHERE monthly_salary IN (
+    SELECT DISTINCT monthly_salary
+    FROM employees e2
+    WHERE e1.company_id = e2.company_id
+    ORDER BY monthly_salary DESC
+    LIMIT 5
+);
+
+-- ADVANCED QUERIES
+-- Q24: RANK salary within each company
+SELECT company_name, full_name, monthly_salary, RANK() OVER (PARTITION BY company_name ORDER BY monthly_salary DESC) AS salary_rank
+FROM employees_1000;
+
+-- Q25: Top 3 earners per company using RANK
+WITH ranked AS (
+      SELECT full_name, monthly_salary, company_name, designation,
+      RANK() OVER (PARTITION BY company_name ORDER BY monthly_salary DESC) AS rnk
+      FROM employees_1000
+)
+SELECT full_name, monthly_salary, company_name, designation     
+FROM ranked
+WHERE rnk >= 3 LIMIT 3;
+
+-- Q26: ROW_NUMBER for all employees
+SELECT ROW_NUMBER() OVER (ORDER BY emp_id ) AS row_num,
+full_name, company_name, designation
+FROM employees_1000;
+
+-- Q27: Running total salary (by company)alter
+select full_name, company_name, monthly_salary,
+sum(monthly_salary) over ( partition by company_name order by emp_id) as running_total
+from employees_1000;
+
+-- Q28: CTE — department summary
+WITH dept_summary AS (
+   SELECT department, company_name,
+   COUNT(*) AS headcount,
+   ROUND(AVG(monthly_salary),2) AS avg_salary,
+   ROUND(AVG(performance_score),2) AS avg_score
+   FROM employees_1000
+   GROUP BY department, company_name
+)
+SELECT * FROM dept_summary
+ORDER BY company_name, avg_salary DESC;
+
+-- Q29: Performance band classification
+SELECT full_name, company_name, performance_score,
+ CASE
+   WHEN performance_score >= 4.5 THEN 'ouststanding'
+   WHEN performance_score >= 4 THEN 'excellent'
+   WHEN performance_score >= 3.5 THEN 'Good'
+   WHEN performance_score >= 3 THEN 'Average'
+   ELSE 'Needs_Improvement'
+ END AS performance_band
+FROM employees_1000
+ORDER BY performance_score DESC;
+
+-- Q30: Salary band classification
+SELECT full_name, company_name, monthly_salary,
+ CASE
+     WHEN monthly_salary>= 120000 THEN 'Senior_level'
+     WHEN monthly_salary>= 90000 THEN 'Mid_Senior level'
+     WHEN monthly_salary>= 60000 THEN 'Mid_level'
+     ELSE 'Junio level'
+	END AS salary_band
+FROM employees_1000
+ORDER BY monthly_salary DESC;
+
+-- =========================END==================
+
+
+
+
+
+   
+  
